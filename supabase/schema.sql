@@ -1,8 +1,24 @@
 -- Stufff App Database Schema for Supabase
 -- Run this in the Supabase SQL Editor
+-- Safe to run multiple times (uses DROP IF EXISTS)
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Drop existing policies first (to allow re-run)
+DROP POLICY IF EXISTS "Users can view all profiles" ON profiles;
+DROP POLICY IF EXISTS "Users can update own profile" ON profiles;
+DROP POLICY IF EXISTS "Users can insert own profile" ON profiles;
+DROP POLICY IF EXISTS "Anyone can view active items" ON items;
+DROP POLICY IF EXISTS "Users can insert own items" ON items;
+DROP POLICY IF EXISTS "Users can update own items" ON items;
+DROP POLICY IF EXISTS "Users can delete own items" ON items;
+DROP POLICY IF EXISTS "Users can view own interests" ON interests;
+DROP POLICY IF EXISTS "Users can insert own interests" ON interests;
+DROP POLICY IF EXISTS "Users can delete own interests" ON interests;
+DROP POLICY IF EXISTS "Users can view messages they sent or received" ON messages;
+DROP POLICY IF EXISTS "Users can insert messages they send" ON messages;
+DROP POLICY IF EXISTS "Users can update messages they received (for read status)" ON messages;
 
 -- Users profile (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS profiles (
@@ -112,6 +128,11 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('items', 'items', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Drop existing storage policies
+DROP POLICY IF EXISTS "Anyone can view item images" ON storage.objects;
+DROP POLICY IF EXISTS "Authenticated users can upload item images" ON storage.objects;
+DROP POLICY IF EXISTS "Users can delete own item images" ON storage.objects;
+
 -- Storage policies
 CREATE POLICY "Anyone can view item images" ON storage.objects
   FOR SELECT USING (bucket_id = 'items');
@@ -127,7 +148,8 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, email)
-  VALUES (new.id, new.email);
+  VALUES (new.id, new.email)
+  ON CONFLICT (id) DO NOTHING;
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -138,5 +160,10 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Enable realtime for messages
-ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+-- Enable realtime for messages (ignore error if already added)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;

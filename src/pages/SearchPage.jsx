@@ -79,7 +79,7 @@ export default function SearchPage({ onSelectItem }) {
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock size={12} className="text-purple-400" />
-                  <span>{formatTimeAgo(item.postedAt)}</span>
+                  <span>{formatTimeAgo(item.createdAt)}</span>
                 </span>
               </div>
             </div>

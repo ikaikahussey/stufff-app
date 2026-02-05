@@ -422,6 +422,17 @@ export function StuffsProvider({ children }) {
     return scheduledMeetups[itemId]?.status || null
   }, [messages, scheduledMeetups, isConfigured])
 
+  const searchItems = useCallback((query) => {
+    if (!query || !query.trim()) return items
+    const lowerQuery = query.toLowerCase()
+    return items.filter(item =>
+      item.title?.toLowerCase().includes(lowerQuery) ||
+      item.description?.toLowerCase().includes(lowerQuery) ||
+      item.category?.toLowerCase().includes(lowerQuery) ||
+      item.location?.toLowerCase().includes(lowerQuery)
+    )
+  }, [items])
+
   const value = {
     items,
     myStuff,
@@ -435,6 +446,7 @@ export function StuffsProvider({ children }) {
     getMessages,
     getUnreadCount,
     getMeetupStatus,
+    searchItems,
     refreshItems: loadItems,
     refreshMyStuff: loadMyStuff
   }
